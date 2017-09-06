@@ -31,7 +31,7 @@
 #define LUA_USE_MODULES_DHT
 //#define LUA_USE_MODULES_DS18B20
 //#define LUA_USE_MODULES_ENCODER
-//#define LUA_USE_MODULES_ENDUSER_SETUP // USE_DNS in dhcpserver.h needs to be enabled for this module to work.
+#define LUA_USE_MODULES_ENDUSER_SETUP // USE_DNS in dhcpserver.h needs to be enabled for this module to work.
 #define LUA_USE_MODULES_FILE
 //#define LUA_USE_MODULES_GDBSTUB
 #define LUA_USE_MODULES_GPIO
@@ -58,7 +58,7 @@
 //#define LUA_USE_MODULES_RTCTIME
 //#define LUA_USE_MODULES_SI7021
 //#define LUA_USE_MODULES_SIGMA_DELTA
-//#define LUA_USE_MODULES_SJSON
+#define LUA_USE_MODULES_SJSON
 //#define LUA_USE_MODULES_SNTP
 //#define LUA_USE_MODULES_SOMFY
 #define LUA_USE_MODULES_SPI
