@@ -642,6 +642,7 @@ static int enduser_setup_http_handle_credentials(char *data, unsigned short data
   
   char *name_str = (char *) ((uint32_t)strstr(&(data[6]), "wifi_ssid="));
   char *pwd_str = (char *) ((uint32_t)strstr(&(data[6]), "wifi_password="));
+  char *config_str = (char *) ((uint32_t)strstr(&(data[6]), "config="));
   if (name_str == NULL || pwd_str == NULL)
   {
     ENDUSER_SETUP_DEBUG("Password or SSID string not found");
@@ -660,7 +661,15 @@ static int enduser_setup_http_handle_credentials(char *data, unsigned short data
     ENDUSER_SETUP_DEBUG("Password or SSID HTTP paramter divider not found");
     return 1;
   }
-
+  /* Define these items here, so they have function scope */
+  int config_field_len;
+  char *config_str_start;
+  if(config_str != NULL)
+  {
+    ENDUSER_SETUP_DEBUG("Extra Config Data found along with SSID information");
+    config_field_len = LITLEN("config=");
+	config_str_start = config_str + config_field_len;
+  }
 
   struct station_config *cnf = luaM_malloc(lua_getstate(), sizeof(struct station_config));
   c_memset(cnf, 0, sizeof(struct station_config));
@@ -668,6 +677,10 @@ static int enduser_setup_http_handle_credentials(char *data, unsigned short data
   int err;
   err  = enduser_setup_http_urldecode(cnf->ssid, name_str_start, name_str_len, sizeof(cnf->ssid));
   err |= enduser_setup_http_urldecode(cnf->password, pwd_str_start, pwd_str_len, sizeof(cnf->password));
+  if(config_str != NULL)
+  {
+    err |= enduser_setup_http_urldecode(cnf->config, config_str_start, config_str_len, sizeof(cnf->config));
+  }
   if (err != 0 || c_strlen(cnf->ssid) == 0)
   {
     ENDUSER_SETUP_DEBUG("Unable to decode HTTP parameter to valid password or SSID");
@@ -682,6 +695,11 @@ static int enduser_setup_http_handle_credentials(char *data, unsigned short data
   ENDUSER_SETUP_DEBUG(cnf->ssid);
   ENDUSER_SETUP_DEBUG("pass: ");
   ENDUSER_SETUP_DEBUG(cnf->password);
+  if(config_str != NULL)
+  {
+    ENDUSER_SETUP_DEBUG("config: ");
+  ENDUSER_SETUP_DEBUG(cnf->config);
+  }
   ENDUSER_SETUP_DEBUG("-----------------------");
   ENDUSER_SETUP_DEBUG("");
 
