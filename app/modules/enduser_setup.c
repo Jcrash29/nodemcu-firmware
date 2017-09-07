@@ -627,6 +627,72 @@ static void do_station_cfg (task_param_t param, uint8_t prio)
 
 
 /**
+ *
+ *
+ *
+ *
+ */
+static int enduser_setup_write_file_with_extra_configuration_data(
+char * configuration_string, int configuration_length
+)
+{
+  int p_file = 0;
+  lua_State *L = NULL;
+	
+  ENDUSER_SETUP_DEBUG("enduser: opening enduser_custom_parameters.json for write");
+
+  // setup the file output
+  p_file = vfs_open("enduser_custom_parameters.json", "w");
+  if (p_file == 0)
+  {
+    ENDUSER_SETUP_DEBUG("Can't write to file!");
+    return 1;
+  }
+  
+  vfs_write(p_file, "{", 1);
+  
+  /* Not certain what this does */
+  if (state != NULL && state->lua_validation_cb_ref != LUA_NOREF)
+  {
+    L = lua_getstate();
+    lua_rawgeti(L, LUA_REGISTRYINDEX, state->lua_validation_cb_ref);
+    lua_createtable( L, 0, param_count - 2 );
+  }
+  else
+  {
+    /*I assume there is a problem if the above doesnt execute */
+	return 1;
+  }
+  
+  if (L != NULL) 
+  {
+    lua_pushlstring(L, configuration_string, configuration_length);
+  }
+  
+  vfs_write(p_file, configuration_string, configuration_length);
+  vfs_write(p_file, "\"", 1);
+  vfs_write(p_file, "}", 1);
+  vfs_close(p_file);
+  
+  if (L != NULL) {
+    ENDUSER_SETUP_DEBUG("enduser: calling lua for validation");
+
+    lua_call(L, 1, 1);
+
+    // did we get a table back? should have a status
+    ENDUSER_SETUP_DEBUG("enduser: checking if lua table was returned");
+
+    if (lua_type( L, lua_gettop( L ) ) == LUA_TTABLE) {
+      enduser_extract_validation_result(L, validation);
+    }
+
+    lua_pop( L, 1 );
+  }
+
+return 0;
+}
+
+/**
  * Handle HTTP Credentials
  *
  * @return - return 0 iff credentials are found and handled successfully
@@ -642,7 +708,6 @@ static int enduser_setup_http_handle_credentials(char *data, unsigned short data
   
   char *name_str = (char *) ((uint32_t)strstr(&(data[6]), "wifi_ssid="));
   char *pwd_str = (char *) ((uint32_t)strstr(&(data[6]), "wifi_password="));
-  char *config_str = (char *) ((uint32_t)strstr(&(data[6]), "config="));
   if (name_str == NULL || pwd_str == NULL)
   {
     ENDUSER_SETUP_DEBUG("Password or SSID string not found");
@@ -661,15 +726,6 @@ static int enduser_setup_http_handle_credentials(char *data, unsigned short data
     ENDUSER_SETUP_DEBUG("Password or SSID HTTP paramter divider not found");
     return 1;
   }
-  /* Define these items here, so they have function scope */
-  int config_field_len;
-  char *config_str_start;
-  if(config_str != NULL)
-  {
-    ENDUSER_SETUP_DEBUG("Extra Config Data found along with SSID information");
-    config_field_len = LITLEN("config=");
-	config_str_start = config_str + config_field_len;
-  }
 
   struct station_config *cnf = luaM_malloc(lua_getstate(), sizeof(struct station_config));
   c_memset(cnf, 0, sizeof(struct station_config));
@@ -677,16 +733,28 @@ static int enduser_setup_http_handle_credentials(char *data, unsigned short data
   int err;
   err  = enduser_setup_http_urldecode(cnf->ssid, name_str_start, name_str_len, sizeof(cnf->ssid));
   err |= enduser_setup_http_urldecode(cnf->password, pwd_str_start, pwd_str_len, sizeof(cnf->password));
-  if(config_str != NULL)
-  {
-    err |= enduser_setup_http_urldecode(cnf->config, config_str_start, config_str_len, sizeof(cnf->config));
-  }
+
+  
   if (err != 0 || c_strlen(cnf->ssid) == 0)
   {
     ENDUSER_SETUP_DEBUG("Unable to decode HTTP parameter to valid password or SSID");
     return 1;
   }
 
+  if(config_str != NULL)
+  {
+    char *config_str = (char *) ((uint32_t)strstr(&(data[6]), "config="));
+    int config_field_len = LITLEN("config=");
+    char *config_str_start = config_str + config_field_len;
+    ENDUSER_SETUP_DEBUG("Extra Config Data found");
+	
+    /* Create a new variable for storing the decoded string.
+     * Add one more size(char) to allow for \0 */
+	char decoded_config_str[config_str_len+1];
+    err |= enduser_setup_http_urldecode(decoded_config_str, config_str_start, config_str_len, sizeof(decoded_config_str));
+	
+	enduser_setup_write_file_with_extra_configuration_data(config_str_start, config_str_len);
+  }
 
   ENDUSER_SETUP_DEBUG("");
   ENDUSER_SETUP_DEBUG("WiFi Credentials Stored");
@@ -698,7 +766,7 @@ static int enduser_setup_http_handle_credentials(char *data, unsigned short data
   if(config_str != NULL)
   {
     ENDUSER_SETUP_DEBUG("config: ");
-  ENDUSER_SETUP_DEBUG(cnf->config);
+    ENDUSER_SETUP_DEBUG(cnf->config);
   }
   ENDUSER_SETUP_DEBUG("-----------------------");
   ENDUSER_SETUP_DEBUG("");
