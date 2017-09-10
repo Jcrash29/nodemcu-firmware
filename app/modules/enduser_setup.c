@@ -652,17 +652,7 @@ char * configuration_string, int configuration_length
   vfs_write(p_file, "{", 1);
   
   /* Not certain what this does */
-  if (state != NULL && state->lua_validation_cb_ref != LUA_NOREF)
-  {
-    L = lua_getstate();
-    lua_rawgeti(L, LUA_REGISTRYINDEX, state->lua_validation_cb_ref);
-    lua_createtable( L, 0, param_count - 2 );
-  }
-  else
-  {
-    /*I assume there is a problem if the above doesnt execute */
-	return 1;
-  }
+  L = lua_getstate();
   
   if (L != NULL) 
   {
@@ -678,13 +668,6 @@ char * configuration_string, int configuration_length
     ENDUSER_SETUP_DEBUG("enduser: calling lua for validation");
 
     lua_call(L, 1, 1);
-
-    // did we get a table back? should have a status
-    ENDUSER_SETUP_DEBUG("enduser: checking if lua table was returned");
-
-    if (lua_type( L, lua_gettop( L ) ) == LUA_TTABLE) {
-      enduser_extract_validation_result(L, validation);
-    }
 
     lua_pop( L, 1 );
   }
@@ -741,11 +724,12 @@ static int enduser_setup_http_handle_credentials(char *data, unsigned short data
     return 1;
   }
 
+  char *config_str = (char *) ((uint32_t)strstr(&(data[6]), "config="));
   if(config_str != NULL)
   {
-    char *config_str = (char *) ((uint32_t)strstr(&(data[6]), "config="));
     int config_field_len = LITLEN("config=");
     char *config_str_start = config_str + config_field_len;
+    int config_str_len = enduser_setup_srch_str(config_str_start, "& ");
     ENDUSER_SETUP_DEBUG("Extra Config Data found");
 	
     /* Create a new variable for storing the decoded string.
