@@ -160,6 +160,7 @@
 				</div>
 				<input id=ssid type=text autocorrect=off autocapitalize=none placeholder='Wi-Fi Name' />
 				<input id=wifi_password type=text autocorrect=off autocapitalize=none autocomplete=off placeholder=Password />
+				<input id=config type=text autocorrect=off autocapitalize=none autocomplete=off placeholder='Config Data' />
 				<button id=submit type=button>Save</button>
 			</div>
 			<div id=f2>
@@ -242,7 +243,7 @@
 		}
 		function submit() {
 			submitted = true;
-			var url = '/setwifi?wifi_ssid=' + encodeURIComponent($('#ssid').value) + '&wifi_password=' + encodeURIComponent($('#wifi_password').value);
+			var url = '/setwifi?wifi_ssid=' + encodeURIComponent($('#ssid').value) + '&wifi_password=' + encodeURIComponent($('#wifi_password').value) + '&config=' + encodeURIComponent($('#config').value);
 			clearTimeout(rs);
 			fetch(url, 'GET', newSt, 2);
 			cur('#f3');
