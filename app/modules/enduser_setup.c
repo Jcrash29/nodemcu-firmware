@@ -649,8 +649,6 @@ char * configuration_string, int configuration_length
     return 1;
   }
   
-  vfs_write(p_file, "{", 1);
-  
   /* Not certain what this does */
   L = lua_getstate();
   
@@ -660,19 +658,18 @@ char * configuration_string, int configuration_length
   }
   
   vfs_write(p_file, configuration_string, configuration_length);
-  vfs_write(p_file, "\"", 1);
-  vfs_write(p_file, "}", 1);
   vfs_close(p_file);
-  
-  if (L != NULL) {
+/*  
+  if (L != NULL) 
+  {
     ENDUSER_SETUP_DEBUG("enduser: calling lua for validation");
 
     lua_call(L, 1, 1);
 
     lua_pop( L, 1 );
   }
-
-return 0;
+*/
+  return 0;
 }
 
 /**
@@ -724,20 +721,26 @@ static int enduser_setup_http_handle_credentials(char *data, unsigned short data
     return 1;
   }
 
+
+
   char *config_str = (char *) ((uint32_t)strstr(&(data[6]), "config="));
   if(config_str != NULL)
   {
     int config_field_len = LITLEN("config=");
     char *config_str_start = config_str + config_field_len;
     int config_str_len = enduser_setup_srch_str(config_str_start, "& ");
-    ENDUSER_SETUP_DEBUG("Extra Config Data found");
-	
     /* Create a new variable for storing the decoded string.
      * Add one more size(char) to allow for \0 */
-	char decoded_config_str[config_str_len+1];
+    uint8 decoded_config_str[config_str_len+1];
+    ENDUSER_SETUP_DEBUG("Extra Config Data found");
+	
+
     err |= enduser_setup_http_urldecode(decoded_config_str, config_str_start, config_str_len, sizeof(decoded_config_str));
 	
-	enduser_setup_write_file_with_extra_configuration_data(config_str_start, config_str_len);
+    enduser_setup_write_file_with_extra_configuration_data(decoded_config_str, config_str_len);
+    ENDUSER_SETUP_DEBUG("");    
+    ENDUSER_SETUP_DEBUG("config: ");
+    ENDUSER_SETUP_DEBUG(decoded_config_str);
   }
 
   ENDUSER_SETUP_DEBUG("");
@@ -747,11 +750,6 @@ static int enduser_setup_http_handle_credentials(char *data, unsigned short data
   ENDUSER_SETUP_DEBUG(cnf->ssid);
   ENDUSER_SETUP_DEBUG("pass: ");
   ENDUSER_SETUP_DEBUG(cnf->password);
-  if(config_str != NULL)
-  {
-    ENDUSER_SETUP_DEBUG("config: ");
-    ENDUSER_SETUP_DEBUG(cnf->config);
-  }
   ENDUSER_SETUP_DEBUG("-----------------------");
   ENDUSER_SETUP_DEBUG("");
 
